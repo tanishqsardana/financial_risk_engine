@@ -1,0 +1,29 @@
+asset_id,ticker_or_series_id,asset_name,asset_type,segment,quality_bucket,source
+corp_ig_broad,BAMLCC0A0CMTRIV,ICE BofA US Corporate Index,index,corporate,investment_grade,FRED
+corp_aaa,BAMLCC0A1AAATRIV,ICE BofA AAA US Corporate Index,index,corporate,AAA,FRED
+corp_aa,BAMLCC0A2AATRIV,ICE BofA AA US Corporate Index,index,corporate,AA,FRED
+corp_a,BAMLCC0A3ATRIV,ICE BofA Single-A US Corporate Index,index,corporate,A,FRED
+corp_bbb,BAMLCC0A4BBBTRIV,ICE BofA BBB US Corporate Index,index,corporate,BBB,FRED
+corp_1_3y,BAMLCC1A013YTRIV,ICE BofA 1-3 Year US Corporate Index,index,corporate,investment_grade_short_duration,FRED
+hy_broad,BAMLHYH0A0HYM2TRIV,ICE BofA US High Yield Index,index,high_yield,broad_high_yield,FRED
+hy_bb,BAMLHYH0A1BBTRIV,ICE BofA BB US High Yield Index,index,high_yield,BB,FRED
+hy_b,BAMLHYH0A2BTRIV,ICE BofA Single-B US High Yield Index,index,high_yield,B,FRED
+hy_ccc,BAMLHYH0A3CMTRIV,ICE BofA CCC & Lower US High Yield Index,index,high_yield,CCC_and_lower,FRED
+em_broad,BAMLEMCBPITRIV,ICE BofA Emerging Markets Corporate Plus Index,index,emerging_markets,broad_em,FRED
+em_high_grade,BAMLEMIBHGCRPITRIV,ICE BofA High Grade Emerging Markets Corporate Plus Index,index,emerging_markets,high_grade,FRED
+em_high_yield,BAMLEMHBHYCRPITRIV,ICE BofA High Yield Emerging Markets Corporate Plus Index,index,emerging_markets,high_yield,FRED
+municipal_broad,NASDAQOMRXMUNI,OMRX Municipal Bond Index,index,municipal,broad_municipal,FRED
+agg_etf,AGG,iShares Core U.S. Aggregate Bond ETF,etf,aggregate,broad_investment_grade,Yahoo Finance
+bnd_etf,BND,Vanguard Total Bond Market ETF,etf,aggregate,broad_investment_grade,Yahoo Finance
+lqd_etf,LQD,iShares iBoxx $ Investment Grade Corporate Bond ETF,etf,corporate,investment_grade,Yahoo Finance
+vcit_etf,VCIT,Vanguard Intermediate-Term Corporate Bond ETF,etf,corporate,investment_grade_intermediate,Yahoo Finance
+vcsh_etf,VCSH,Vanguard Short-Term Corporate Bond ETF,etf,corporate,investment_grade_short_duration,Yahoo Finance
+hyg_etf,HYG,iShares iBoxx $ High Yield Corporate Bond ETF,etf,high_yield,broad_high_yield,Yahoo Finance
+jnk_etf,JNK,SPDR Bloomberg High Yield Bond ETF,etf,high_yield,broad_high_yield,Yahoo Finance
+mub_etf,MUB,iShares National Muni Bond ETF,etf,municipal,broad_municipal,Yahoo Finance
+tip_etf,TIP,iShares TIPS Bond ETF,etf,inflation_linked,treasury_tips,Yahoo Finance
+emb_etf,EMB,iShares J.P. Morgan USD Emerging Markets Bond ETF,etf,emerging_markets,sovereign_usd,Yahoo Finance
+bndx_etf,BNDX,Vanguard Total International Bond ETF,etf,international,broad_international_hedged,Yahoo Finance
+ief_etf,IEF,iShares 7-10 Year Treasury Bond ETF,etf,treasury,intermediate_treasury,Yahoo Finance
+tlt_etf,TLT,iShares 20+ Year Treasury Bond ETF,etf,treasury,long_treasury,Yahoo Finance
+shy_etf,SHY,iShares 1-3 Year Treasury Bond ETF,etf,treasury,short_treasury,Yahoo Finance

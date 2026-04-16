@@ -1,0 +1,5 @@
+file_name,row_count
+bond_factors_monthly.csv,120
+synthetic_bond_universe.csv,500
+synthetic_bond_history.csv,60000
+synthetic_covariance_matrix.csv,500

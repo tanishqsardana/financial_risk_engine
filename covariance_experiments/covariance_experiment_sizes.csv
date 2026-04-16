@@ -1,0 +1,8 @@
+n_assets,n_periods,base_assets_used,construction
+28,120,28,observed_real_assets
+56,120,28,real_panel_derived_expansion
+112,120,28,real_panel_derived_expansion
+224,120,28,real_panel_derived_expansion
+448,120,28,real_panel_derived_expansion
+896,120,28,real_panel_derived_expansion
+1792,120,28,real_panel_derived_expansion
