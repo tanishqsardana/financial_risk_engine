@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import time
+import os 
+import shutil
 from pyomo.environ import *
 
 import opt_utils
@@ -71,7 +73,7 @@ def build_mip_model(bond_universe: pd.DataFrame, constraint_dict: dict):
 
     # bucketing by bond rating 
     aaa_bucket = bond_universe.loc[bond_universe['rating_bucket']=='AAA', 'bond_id'].to_list()
-    b_bucket = bond_universe.loc[bond_universe['rating_bucket'].insin(['BBB','BB']), 'bond_id'].to_list()
+    b_bucket = bond_universe.loc[bond_universe['rating_bucket'].isin(['BBB','BB']), 'bond_id'].to_list()
 
 
     # instantiate and build out model 
@@ -89,70 +91,64 @@ def build_mip_model(bond_universe: pd.DataFrame, constraint_dict: dict):
     
     """
     # decision variables 
-    # variables: x[i] := decision to include bond index i in bond portfolio 
-    #            x[i] = 1 if yes, included 
-    #            x[i] = 0 if no, excluded 
-    #            w[i] = the number of minimum increment choices of bond i to include to the portfolio 
-    #                   this is the "weight" of bond i in the portfolio, if this # is divided by the 
-    #                   total face value of the bond portfolio 
+    # variables: x[i] := number of minimum increments of bond index i to include in bond portfolio 
+    #            x[i] > 0 if yes, included (integers only)
+    #            x[i] = 0 if no, excluded from portfolio
     """
-    opt_model.x = Var(opt_model.BondPool, domain = Binary) 
-    opt_model.w = Var(opt_model.BondPool, domain = NonNegativeIntegers)
+    opt_model.x = Var(opt_model.BondPool, domain = NonNegativeIntegers)
 
     """
     # Objective Function: maximize expected return of portfolio
-    # mininc_i * w_i * x_i * exp_return_i : the number of minimum increments*min increment amount*decision to include bond i*expected return of bond i 
+    # mininc_i * x_i * exp_return_i : the number of minimum increments*min increment amount*decision to include bond i*expected return of bond i 
     """
-    obj_func = sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i]*opt_model.exp_ret[i] for i in opt_model.BondPool)
+    obj_func = sum(opt_model.x[i]*opt_model.min_inc[i]*opt_model.exp_ret[i] for i in opt_model.BondPool)
     opt_model.obj = Objective(expr=obj_func, sense=maximize)
 
     """
     Constraints:
     formulating constraints as laid out in constraint dictionary 
     """
+    # portfolio face value - used for linearizing weighted average constraints 
+    fv = sum(opt_model.x[i] * opt_model.min_inc[i] for i in opt_model.BondPool)
 
     # constraint 1: target value range of bond portfolio 
-    val_range = sum(opt_model.w[i]*opt_model.x[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
+    val_range = sum(opt_model.x[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
     opt_model.min_fv = Constraint(expr = val_range >= config['fv_min'])
     opt_model.max_fv = Constraint(expr = val_range <= config['fv_max'])
     
     # constraint 2: time horizon maximum: weighted average 
-    wavg_mat = sum(opt_model.x[i]*opt_model.w[i]*opt_model.mat[i]*opt_model.min_inc[i] for i in opt_model.BondPool)/sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
-    opt_model.max_mat = Constraint(expr = wavg_mat <= config['mat_max'])
+    wavg_mat = sum(opt_model.x[i]*opt_model.mat[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
    
     # constraint 3: budget - redundant with constraint #1 
    
     # constraint 4: liquidity score acceptable range 
-    wavg_liq = sum(opt_model.x[i]*opt_model.w[i]*opt_model.liq_score[i]*opt_model.min_inc[i] for i in opt_model.BondPool)/sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
-    opt_model.min_liq = Constraint(expr = wavg_liq >= config['liq_min'])
+    wavg_liq = sum(opt_model.x[i]*opt_model.liq_score[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
+    opt_model.min_liq = Constraint(expr = wavg_liq >= config['liq_min']*fv)
    
     # constraint 5: expected return minimum (greater than inflation benchmark)
-    wavg_exp_ret = sum(opt_model.x[i]*opt_model.w[i]*opt_model.exp_ret[i]*opt_model.min_inc[i] for i in opt_model.BondPool)/sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
-    opt_model.inflation_const = Constraint(expr = wavg_exp_ret >= config['ret_min'])
+    wavg_exp_ret = sum(opt_model.x[i]*opt_model.exp_ret[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
+    opt_model.inflation_const = Constraint(expr = wavg_exp_ret >= config['ret_min']*fv)
     
     # constraint 6: minimum AAA percentage 
-    wavg_aaa = sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.AAAPool)/sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
-    opt_model.aaa_min = Constraint(expr = wavg_aaa >= config['aaa_min'])
+    wavg_aaa = sum(opt_model.x[i]*opt_model.min_inc[i] for i in opt_model.AAAPool)
+    opt_model.aaa_min = Constraint(expr = wavg_aaa >= config['aaa_min']*fv)
     
     # constraint 7: maximum BBB+BB percentage 
-    wavg_b = sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.BRatingPool)/sum(opt_model.x[i]*opt_model.w[i]*opt_model.min_inc[i] for i in opt_model.BondPool)
-    opt_model.b_max = Constraint(expr = wavg_b >= config['bbb_bb_max'])
+    wavg_b = sum(opt_model.x[i]*opt_model.min_inc[i] for i in opt_model.BRatingPool)
+    opt_model.b_max = Constraint(expr = wavg_b <= config['bbb_bb_max']*fv)
 
     return opt_model
 
 """
 Function: mip_solver
 """
-def mip_solver(model: object, solver_name:str): 
-    SOLVER_PATHS = {
-        'ipopt': '/opt/homebrew/bin/ipopt',
-        'highs': '/opt/homebrew/bin/highs',
-    }
-    path = SOLVER_PATHS.get(solver_name)
-    if path:
-        solver = SolverFactory(solver_name, executable=path)
-    else:
-        solver = SolverFactory(solver_name)
+def mip_solver(model: object, solver_name:str='appsi_highs'): 
+    solver = SolverFactory(solver_name)
+    if not solver.available():
+        raise RuntimeError(
+            f"Solver '{solver_name}' is not available. "
+            "For HiGHS, ensure 'highspy' is installed: pip install highspy"
+        )
     results = solver.solve(model, tee=False)
     return results
 
@@ -160,7 +156,7 @@ def mip_solver(model: object, solver_name:str):
 """
 Function: run all scenarios in the global CONSTRAINTS dictionary 
 """
-def run_all_scenarios(bond_universe: pd.DataFrame, solver_name: str = 'highs'):
+def run_all_scenarios(bond_universe: pd.DataFrame, solver_name: str = 'appsi_highs'):
     scenario_results = {}
 
     for scenario_id, config in CONSTRAINTS.items():
@@ -181,7 +177,8 @@ def run_all_scenarios(bond_universe: pd.DataFrame, solver_name: str = 'highs'):
                 print(f"Status: Optimal Solution Found")
                 print(f"Portfolio Expected Return ($): {obj_val:,.2f}")
                 print(f"Solve Time: {end_time - start_time:.2f} seconds\n")
-                
+                print(obj_val)
+
                 scenario_results[scenario_id] = {
                     "model": model,
                     "objective": obj_val,
@@ -195,6 +192,12 @@ def run_all_scenarios(bond_universe: pd.DataFrame, solver_name: str = 'highs'):
             print(f"Error processing {config['name']}: {e}\n")
 
     return scenario_results
+
+
+"""
+# Get results from model 
+"""
+
 
 """
 # Run script 
