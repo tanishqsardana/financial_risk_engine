@@ -152,6 +152,37 @@ def mip_solver(model: object, solver_name:str='appsi_highs'):
     results = solver.solve(model, tee=False)
     return results
 
+"""
+# Get bond portfolio dataframe from model 
+"""
+def return_results(model, bond_universe): 
+    portfolio = [] # instantiate data frame for bonds 
+    for i in model.BondPool: 
+        x_temp = int(model.x[i])
+
+        # append allocated bonds to portfolio list 
+        if x_temp >= 1 and x_temp is not None:
+            portfolio.append({
+                'bond_id': i,
+                'increments_allocated': x_temp,
+                'fv_allocated': x_temp * int(model.min_inc[i])
+            })
+
+    # construct allocated bond portfolio dataframe 
+    if portfolio is not None: 
+        bond_df = pd.DataFrame(portfolio)
+        bond_df = bond_df.merge(bond_universe[[
+                'bond_id', 'bond_type', 'rating_bucket', 'market_price',
+                'expected_annual_return_pct', 'liquidity_score',
+                'maturity_years', 'annual_volatility_pct'
+            ]],
+            on='bond_id'
+            )
+    else: 
+        bond_df = pd.DataFrame() # empty dataframe 
+    
+    return bond_df
+
 
 """
 Function: run all scenarios in the global CONSTRAINTS dictionary 
@@ -192,11 +223,6 @@ def run_all_scenarios(bond_universe: pd.DataFrame, solver_name: str = 'appsi_hig
             print(f"Error processing {config['name']}: {e}\n")
 
     return scenario_results
-
-
-"""
-# Get results from model 
-"""
 
 
 """
