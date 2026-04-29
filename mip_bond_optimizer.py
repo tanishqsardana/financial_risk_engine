@@ -19,7 +19,7 @@ import opt_utils
 """
 
 
-""" Defining Bond Scenario Aggregate Constraints """
+""" Defining Global Variables: Bond Scenario Aggregate Constraints """
 CONSTRAINTS = {
     1: dict(
         name="Portfolio 1 — ~$50M target value, medium time horizon",
@@ -164,15 +164,15 @@ def get_results(model: object, bond_universe: pd.DataFrame):
         x_temp = int(model.x[i])
 
         # append allocated bonds to portfolio list 
-        if x_temp >= 1 and x_temp is not None:
+        if x_temp is not None and x_temp >= 1:
             portfolio.append({
                 'bond_id': i,
                 'increments_allocated': x_temp,
                 'fv_allocated': x_temp * int(model.min_inc[i])
             })
 
-    # construct allocated bond portfolio dataframe 
-    if portfolio is not None: 
+    # construct allocated bond portfolio dataframe
+    if portfolio:
         bond_df = pd.DataFrame(portfolio)
         bond_df = bond_df.merge(bond_universe[[
                 'bond_id', 'bond_type', 'rating_bucket', 'market_price',
@@ -181,13 +181,14 @@ def get_results(model: object, bond_universe: pd.DataFrame):
             ]],
             on='bond_id'
             )
-        fv_tot = df['fv_allocated'].sum()
-        bond_df['portfolio_weight'] = bond_df["face_value_allocated"] / fv_tot
+        fv_tot = bond_df['fv_allocated'].sum()
+        bond_df['portfolio_weight'] = bond_df["fv_allocated"] / fv_tot
 
     else: 
         bond_df = pd.DataFrame() # empty dataframe 
     
     return bond_df
+
 
 
 """
