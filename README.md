@@ -17,8 +17,14 @@ The project currently has four main parts:
   - Mixed-integer bond optimizer.
 - `monte_carlo_engine.py`
   - Monte Carlo simulation and risk metric functions.
+- `stress_testing_engine.py`
+  - Stress testing utilities for covariance and return shocks.
+- `solver_comparison.py`
+  - Continuous mean-variance solver comparison for OSQP and SLSQP.
+- `factor_covariance_benchmark.py`
+  - Factor covariance construction and covariance benchmarking utilities.
 - `run_full_pipeline.py`
-  - Runs the optimizer, evaluates covariance-based risk, runs Monte Carlo, and writes outputs.
+  - Runs the optimizer, evaluates covariance-based risk, runs Monte Carlo, stress tests, solver comparison, and factor covariance benchmarks.
 - `run_covariance_experiments.py`
   - Benchmarks covariance matrix construction methods.
 
@@ -38,18 +44,20 @@ Install the pinned dependencies:
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-Run all project commands with the local interpreter:
+Activate the environment:
 
 ```bash
-.venv/bin/python ...
+source .venv/bin/activate
 ```
+
+After activation, run project commands with `python` from the repo root.
 
 ## How To Run The Optimizer
 
 Run from the repo root:
 
 ```bash
-.venv/bin/python mip_bond_optimizer.py
+python mip_bond_optimizer.py
 ```
 
 This loads:
@@ -64,7 +72,7 @@ It solves the predefined bond portfolio scenarios and prints scenario-level summ
 Run from the repo root:
 
 ```bash
-.venv/bin/python run_full_pipeline.py
+python run_full_pipeline.py
 ```
 
 This will:
@@ -73,7 +81,10 @@ This will:
 2. Run all optimizer scenarios.
 3. Save each optimal portfolio.
 4. Run Monte Carlo simulation for each optimal portfolio.
-5. Save simulated returns and Monte Carlo risk metrics.
+5. Run stress tests for each optimal scenario.
+6. Run a continuous solver comparison.
+7. Run a factor covariance benchmark.
+8. Save all generated outputs.
 
 ## Notebook
 
@@ -83,7 +94,15 @@ This will:
 If you want to use the notebook with the repo-local environment, launch Jupyter from the virtual environment:
 
 ```bash
-.venv/bin/python -m notebook
+python -m notebook
+```
+
+## Standalone Factor Benchmark
+
+Run the factor covariance benchmark directly from the repo root:
+
+```bash
+python factor_covariance_benchmark.py
 ```
 
 ## Files Produced
@@ -96,8 +115,14 @@ The full pipeline writes files to `outputs/`:
   - Simulated portfolio returns from Monte Carlo.
 - `outputs/mc_metrics_scenario_{id}.csv`
   - Monte Carlo summary risk metrics such as mean, standard deviation, VaR, and CVaR.
+- `outputs/stress_metrics_scenario_{id}.csv`
+  - Stress-test Monte Carlo metrics for baseline, covariance stress, return shock, and combined stress.
 - `outputs/scenario_summary.csv`
   - Scenario-level summary table across all optimal scenarios.
+- `outputs/solver_comparison.csv`
+  - Continuous mean-variance solver comparison results.
+- `outputs/factor_covariance_benchmark.csv`
+  - Runtime and memory benchmark for factor covariance and sample covariance methods.
 
 ## Brief Explanation Of Covariance Risk
 
@@ -124,6 +149,47 @@ From those simulated portfolio returns, the pipeline computes:
 - CVaR
 
 This gives a distribution of possible outcomes instead of a single risk number.
+
+## Stress Testing
+
+Stress testing extends the Monte Carlo engine with simplified adverse scenarios:
+
+- covariance stress
+  - scales the covariance matrix upward
+- return shock
+  - reduces expected annual returns
+- combined stress
+  - applies both shocks together
+
+This helps compare how the same portfolio behaves under normal assumptions versus a deliberately harsher setup.
+
+## Solver Comparison
+
+The solver comparison module does not rerun the integer MIP directly with multiple solvers. Instead, it uses a relaxed continuous mean-variance optimization problem so that:
+
+- CVXPY with OSQP can be tested
+- SciPy with SLSQP can be tested
+
+This keeps the comparison lightweight and robust, but it is not an apples-to-apples replacement for the integer portfolio construction model.
+
+## Factor Covariance Benchmark
+
+The factor covariance benchmark uses the synthetic bond universe factor betas:
+
+- `level_beta`
+- `slope_beta`
+- `spread_ig_beta`
+- `spread_hy_beta`
+- `muni_beta`
+- `fx_beta`
+
+It builds an approximate covariance matrix from those betas and compares that construction path against sample covariance when matching return history is available.
+
+## Limitations
+
+- The MIP optimizer and the continuous solver comparison are not the same formulation.
+- The stress tests are simplified shocks, not a full macro scenario framework.
+- The factor covariance matrix is approximate and partly synthetic, intended for benchmarking and scaling demonstration rather than market-calibrated production risk modeling.
 
 ## Folder Map
 

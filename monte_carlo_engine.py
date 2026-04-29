@@ -4,6 +4,15 @@ import numpy as np
 import pandas as pd
 
 
+def _regularize_covariance(cov_matrix: pd.DataFrame | np.ndarray) -> np.ndarray:
+    sigma = np.asarray(cov_matrix, dtype=float)
+    sigma = (sigma + sigma.T) / 2.0
+    eigvals, eigvecs = np.linalg.eigh(sigma)
+    eigvals = np.clip(eigvals, 1e-8, None)
+    with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+        return eigvecs @ np.diag(eigvals) @ eigvecs.T
+
+
 def simulate_portfolio_returns(
     portfolio_df: pd.DataFrame,
     cov_matrix: pd.DataFrame,
@@ -19,16 +28,17 @@ def simulate_portfolio_returns(
     expected_returns = (
         selected["expected_annual_return_pct"].to_numpy(dtype=float) / 100.0
     )
-    sigma = cov_matrix.loc[bond_ids, bond_ids].to_numpy(dtype=float)
-    sigma = (sigma + sigma.T) / 2.0
+    sigma = _regularize_covariance(cov_matrix.loc[bond_ids, bond_ids])
 
     rng = np.random.default_rng(random_seed)
-    simulated_asset_returns = rng.multivariate_normal(
-        mean=expected_returns,
-        cov=sigma,
-        size=n_simulations,
-    )
-    return simulated_asset_returns @ weights
+    with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+        simulated_asset_returns = rng.multivariate_normal(
+            mean=expected_returns,
+            cov=sigma,
+            size=n_simulations,
+            check_valid="ignore",
+        )
+        return simulated_asset_returns @ weights
 
 
 def compute_risk_metrics(
