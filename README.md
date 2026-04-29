@@ -268,4 +268,4 @@ It builds an approximate covariance matrix from those betas and compares that co
 - `mc_core.pyx`
   - Cython source for the Monte Carlo simulation inner loop.
 - `setup_mc_cython.py`
-  - Builds `mc_core.pyx` into a compiled `.so` extension in-place.
+  - Builds `mc_core.pyx` into a compiled `.so` extension in-place - creates a C script version vua Cython 

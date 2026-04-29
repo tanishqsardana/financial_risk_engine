@@ -2,7 +2,7 @@
 """
 Cython inner loop for Monte Carlo portfolio simulation.
 Caller is responsible for generating standard-normal samples (z) via numpy.
-This module handles the typed Cholesky-transform + weighted portfolio return loop
+This module handles simulated portofio risk + return loop
 without any Python overhead or intermediate array allocation.
 """
 import numpy as np
@@ -17,18 +17,6 @@ def simulate_returns_cython(
     double[:] weights,
     double[:, :] z,
 ) -> np.ndarray:
-    """
-    Parameters
-    ----------
-    mu       : (n_assets,)    expected returns
-    L        : (n_assets, n_assets)  lower Cholesky factor of sigma
-    weights  : (n_assets,)    portfolio weights
-    z        : (n_simulations, n_assets)  pre-drawn standard normals (from numpy)
-
-    Returns
-    -------
-    port_returns : (n_simulations,) simulated portfolio returns
-    """
     cdef int n_sims = z.shape[0]
     cdef int n = z.shape[1]
     cdef int sim, i, j
