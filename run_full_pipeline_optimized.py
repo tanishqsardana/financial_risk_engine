@@ -44,7 +44,7 @@ from monte_carlo_engine_optimized import (
     run_monte_carlo as mc_optimized,
     simulate_portfolio_returns,
     simulate_portfolio_returns_cython,
-    simulate_portfolio_returns_parallel,
+    # simulate_portfolio_returns_parallel,  # T4 disabled
 )
 from solver_comparison_optimized import run_solver_comparison as solver_cmp_optimized
 from stress_testing_engine_optimized import run_stress_tests as stress_optimized
@@ -54,8 +54,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 DATA_DIR = REPO_ROOT / "data"
 OUTPUT_DIR = REPO_ROOT / "outputs"
 
-N_MC = 100_000  # simulation count used for T3/T4/T5 benchmarks
-N_BM_REPS = 5   # repetitions for T7 averaging
+N_MC = 100_000  # simulation count used for T3 benchmark
 
 
 def _time(fn, *args, **kwargs) -> tuple[object, float]:
@@ -111,39 +110,41 @@ def main() -> None:
             to = tb
         rows.append({"technique": f"T3  Cython MC (n={N_MC:,})", "baseline_s": tb, "optimized_s": to})
 
-    # T4: multiprocessing MC (n=N_MC) 
-    if ref_portfolio is not None:
-        _, tb = _time(simulate_portfolio_returns, ref_portfolio, cov_matrix, N_MC)
-        _, to = _time(simulate_portfolio_returns_parallel, ref_portfolio, cov_matrix, N_MC)
-        rows.append({"technique": f"T4  Multiprocessing MC (n={N_MC:,})", "baseline_s": tb, "optimized_s": to})
+    # T4: multiprocessing MC — disabled: process-spawn overhead (~0.5s) exceeds
+    # simulation time on small portfolios. could be helpful for larger scale bond portfolio management. 
+    # if ref_portfolio is not None:
+    #     _, tb = _time(simulate_portfolio_returns, ref_portfolio, cov_matrix, N_MC)
+    #     _, to = _time(simulate_portfolio_returns_parallel, ref_portfolio, cov_matrix, N_MC)
+    #     rows.append({"technique": f"T4  Multiprocessing MC (n={N_MC:,})", "baseline_s": tb, "optimized_s": to})
 
-    # T5: parallel stress tests (n=N_MC)
-    if ref_portfolio is not None:
-        _, tb = _time(stress_baseline, ref_portfolio, cov_matrix, n_simulations=N_MC)
-        _, to = _time(stress_optimized, ref_portfolio, cov_matrix, n_simulations=N_MC)
-        rows.append({"technique": f"T5  Parallel stress tests (n={N_MC:,})", "baseline_s": tb, "optimized_s": to})
+    # T5: parallel stress tests — disabled: same pool overhead issue as T4.
+    # if ref_portfolio is not None:
+    #     _, tb = _time(stress_baseline, ref_portfolio, cov_matrix, n_simulations=N_MC)
+    #     _, to = _time(stress_optimized, ref_portfolio, cov_matrix, n_simulations=N_MC)
+    #     rows.append({"technique": f"T5  Parallel stress tests (n={N_MC:,})", "baseline_s": tb, "optimized_s": to})
 
     # T6: parallel solver comparison 
     _, tb = _time(solver_cmp_baseline, bond_universe, cov_matrix)
     solver_df_opt, to = _time(solver_cmp_optimized, bond_universe, cov_matrix)
     rows.append({"technique": "T6  Parallel solver comparison", "baseline_s": tb, "optimized_s": to})
 
-    # T7: parallel covariance benchmark 
-    bm_sizes = (100, 250, 500, 1000)
-    tb_total, to_total = 0.0, 0.0
-    for _ in range(N_BM_REPS):
-        _, dt = _time(bm_baseline, bond_universe=bond_universe,
-                      return_history_path=return_history_path, sizes=bm_sizes)
-        tb_total += dt
-    for _ in range(N_BM_REPS):
-        _, dt = _time(bm_optimized, bond_universe=bond_universe,
-                      return_history_path=return_history_path, sizes=bm_sizes)
-        to_total += dt
-    rows.append({
-        "technique": f"T7  Parallel cov benchmark (avg/{N_BM_REPS})",
-        "baseline_s": tb_total / N_BM_REPS,
-        "optimized_s": to_total / N_BM_REPS,
-    })
+    # T7: parallel covariance benchmark — disabled: ProcessPoolExecutor overhead
+    # 
+    # bm_sizes = (100, 250, 500, 1000)
+    # tb_total, to_total = 0.0, 0.0
+    # for _ in range(N_BM_REPS):
+    #     _, dt = _time(bm_baseline, bond_universe=bond_universe,
+    #                   return_history_path=return_history_path, sizes=bm_sizes)
+    #     tb_total += dt
+    # for _ in range(N_BM_REPS):
+    #     _, dt = _time(bm_optimized, bond_universe=bond_universe,
+    #                   return_history_path=return_history_path, sizes=bm_sizes)
+    #     to_total += dt
+    # rows.append({
+    #     "technique": f"T7  Parallel cov benchmark (avg/{N_BM_REPS})",
+    #     "baseline_s": tb_total / N_BM_REPS,
+    #     "optimized_s": to_total / N_BM_REPS,
+    # })
 
     # Full pipeline end-to-end 
     t0 = time.perf_counter()
@@ -168,11 +169,13 @@ def main() -> None:
             OUTPUT_DIR / f"mc_returns_scenario_{scenario_id}.csv", index=False)
         mc_result["metrics"].to_csv(
             OUTPUT_DIR / f"mc_metrics_scenario_{scenario_id}.csv", index=False)
-        stress_result = stress_optimized(portfolio_df, cov_matrix)
+        # T5 disabled — use sequential baseline to avoid pool-spawn overhead
+        stress_result = stress_baseline(portfolio_df, cov_matrix)
         pd.concat(stress_result.values(), ignore_index=True).to_csv(
             OUTPUT_DIR / f"stress_metrics_scenario_{scenario_id}.csv", index=False)
     solver_df_opt.to_csv(OUTPUT_DIR / "solver_comparison_optimized.csv", index=False)
-    bm_df_opt = bm_optimized(bond_universe=bond_universe, return_history_path=return_history_path)
+    # T7 disabled — use sequential baseline to avoid pool-spawn overhead
+    bm_df_opt = bm_baseline(bond_universe=bond_universe, return_history_path=return_history_path)
     bm_df_opt.to_csv(OUTPUT_DIR / "factor_covariance_benchmark_optimized.csv", index=False)
     t_full_opt = time.perf_counter() - t0
 
