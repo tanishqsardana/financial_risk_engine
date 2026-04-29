@@ -2,16 +2,19 @@
 
 This repository contains the current bond portfolio optimization and risk pipeline.
 
-## What The Project Contains Right Now
+## Project Contents 
 
-The project currently has four main parts:
+The project has five main parts:
 
 1. A synthetic bond universe in `data/` for optimizer and risk-engine testing.
 2. A real bond universe in `real_data/` made from indexes and bond ETFs.
 3. Covariance-construction experiments in `covariance_experiments/`.
 4. A final optimizer-to-risk pipeline built around the synthetic bond universe.
+5. A high-performance optimized pipeline (`*_optimized.py`) with individualized technique timing in comparison to the baseline counterpart.
 
 ## Main Scripts
+
+### Baseline Pipeline
 
 - `mip_bond_optimizer.py`
   - Mixed-integer bond optimizer.
@@ -28,6 +31,27 @@ The project currently has four main parts:
 - `run_covariance_experiments.py`
   - Benchmarks covariance matrix construction methods.
 
+### Optimized Pipeline
+
+Each baseline script has an `_optimized.py` counterpart with one or more performance techniques applied. `run_full_pipeline_optimized.py` times every technique (labeled T*) individually against the baseline and prints a single summary DataFrame.
+
+- `mip_bond_optimizer_optimized.py`
+  - T1: vectorized covariance slicing via numpy integer-index map instead of pandas `.loc`.
+  - T2: parallel MIP scenario solving — `multiprocessing.Pool` dispatches all 7 scenarios concurrently, with one worker dispatched per scenario.
+- `monte_carlo_engine_optimized.py`
+  - T3: Cython inner loop via `mc_core.pyx` — numpy generates standard normals, Cython typed memoryview loop applies the Cholesky transform and portfolio dot product.
+  - T4: multiprocessing chunk split — `Pool` divides `n_simulations` across CPU cores.
+- `stress_testing_engine_optimized.py`
+  - T5: parallel stress scenarios — `Pool` runs all 4 stress scenarios concurrently.
+- `solver_comparison_optimized.py`
+  - T6: parallel solver calls — `ThreadPoolExecutor` runs CVXPY/OSQP and SciPy/SLSQP simultaneously.
+- `factor_covariance_benchmark_optimized.py`
+  - T7: parallel benchmark sizes — `ProcessPoolExecutor` benchmarks all asset-count sizes concurrently.
+- `mc_core.pyx`
+  - Cython extension source for the Monte Carlo inner loop. Must be compiled before running the optimized pipeline (see below).
+- `setup_mc_cython.py`
+  - Build script for `mc_core.pyx`, to be able to run Cython inner loop. of monte carlo engine 
+
 ## Environment Setup
 
 This repo now has a local virtual environment at `.venv/`.
@@ -42,6 +66,12 @@ Install the pinned dependencies:
 
 ```bash
 .venv/bin/python -m pip install -r requirements.txt
+```
+
+The optimized pipeline requires two additional packages not in `requirements.txt`:
+
+```bash
+pip install cython numpy
 ```
 
 Activate the environment:
@@ -86,6 +116,22 @@ This will:
 7. Run a factor covariance benchmark.
 8. Save all generated outputs.
 
+## How To Run The Optimized Pipeline
+
+Build the Cython extension once before first use:
+
+```bash
+python setup_mc_cython.py build_ext --inplace
+```
+
+Then run the optimized pipeline:
+
+```bash
+python run_full_pipeline_optimized.py
+```
+
+This runs the same end-to-end pipeline using all seven optimization techniques, times each one individually against the baseline, and prints a single summary DataFrame.
+
 ## Notebook
 
 - `notebooks/final_project_pipeline.ipynb`
@@ -107,7 +153,9 @@ python factor_covariance_benchmark.py
 
 ## Files Produced
 
-The full pipeline writes files to `outputs/`:
+Both pipelines write files to `outputs/`. The optimized pipeline writes the same files with an `_optimized` suffix where applicable.
+
+**Baseline (`run_full_pipeline.py`)**
 
 - `outputs/portfolio_scenario_{id}.csv`
   - Optimized bond portfolio for a scenario.
@@ -123,6 +171,16 @@ The full pipeline writes files to `outputs/`:
   - Continuous mean-variance solver comparison results.
 - `outputs/factor_covariance_benchmark.csv`
   - Runtime and memory benchmark for factor covariance and sample covariance methods.
+
+**Optimized (`run_full_pipeline_optimized.py`)**
+
+- `outputs/portfolio_scenario_{id}.csv` — same format, written by optimized solve.
+- `outputs/mc_returns_scenario_{id}.csv` — produced via Cython/parallel Monte Carlo.
+- `outputs/mc_metrics_scenario_{id}.csv` — risk metrics from optimized MC.
+- `outputs/stress_metrics_scenario_{id}.csv` — produced via parallel stress engine.
+- `outputs/scenario_summary_optimized.csv` — scenario summary from parallel solve.
+- `outputs/solver_comparison_optimized.csv` — solver comparison from parallel run.
+- `outputs/factor_covariance_benchmark_optimized.csv` — benchmark from parallel run.
 
 ## Brief Explanation Of Covariance Risk
 
@@ -201,7 +259,13 @@ It builds an approximate covariance matrix from those betas and compares that co
   - Covariance benchmark outputs and summary notes.
 - `outputs/`
   - Final optimizer and Monte Carlo pipeline outputs.
+- `adps_lectures/`
+  - Python notebooks covering optimization, Cython, concurrency, and GPU techniques used as reference for the optimized pipeline.
 - `Info_md's/`
   - Supporting markdown reference files for the project.
 - `requirements.txt`
   - Pinned Python dependencies for the repo-local environment.
+- `mc_core.pyx`
+  - Cython source for the Monte Carlo simulation inner loop.
+- `setup_mc_cython.py`
+  - Builds `mc_core.pyx` into a compiled `.so` extension in-place.
