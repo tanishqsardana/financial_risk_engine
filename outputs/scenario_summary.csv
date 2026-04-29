@@ -1,0 +1,3 @@
+scenario_id,scenario_name,objective_value,solve_time_seconds,selected_bond_count,total_face_value,weighted_expected_return_pct,weighted_liquidity_score,weighted_maturity_years,weighted_annual_volatility_pct,portfolio_variance,portfolio_volatility
+1,"Portfolio 1 — ~$50M target value, medium time horizon",2428903.75,0.25520992279052734,4,50500000.0,4.809710396039604,0.8910247524752475,15.636044554455445,4.999993069306931,0.007127145616535144,0.08442242365944692
+3,"Portfolio 3 — ~$100M target value, long time horizon, moderate/high risk",4632616.700000001,0.14878606796264648,4,101500000.0,4.564154384236454,0.9071461083743843,17.24516157635468,4.999913842364532,0.008299291392931592,0.09110044672191016

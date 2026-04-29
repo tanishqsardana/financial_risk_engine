@@ -1,0 +1,5 @@
+bond_id,increments_allocated,fv_allocated,portfolio_weight,bond_type,rating_bucket,market_price,expected_annual_return_pct,liquidity_score,maturity_years,annual_volatility_pct
+BOND_0072,7225,7225000.0,0.14306930693069306,treasury,AAA,97.27,3.585,0.957,6.72,2.91
+BOND_0097,923,23075000.0,0.45693069306930695,treasury,AAA,91.98,4.142,0.975,16.61,4.222
+BOND_0263,1515,15150000.0,0.3,corporate,A,110.59,5.376,0.879,19.14,6.272
+BOND_0478,5050,5050000.0,0.1,foreign,BB,108.76,7.914,0.449,13.43,7.729

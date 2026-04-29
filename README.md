@@ -1,100 +1,141 @@
 # Bond Portfolio Dataset
 
-This folder contains the current working files for the bond portfolio optimization project.
+This repository contains the current bond portfolio optimization and risk pipeline.
 
 ## What The Project Contains Right Now
 
-The project currently has three main parts:
+The project currently has four main parts:
 
-1. A synthetic bond dataset for large-scale portfolio and risk experiments.
-2. A real bond universe made of benchmark indexes and bond ETFs.
-3. Covariance matrix experiments built on top of the real monthly return panel.
+1. A synthetic bond universe in `data/` for optimizer and risk-engine testing.
+2. A real bond universe in `real_data/` made from indexes and bond ETFs.
+3. Covariance-construction experiments in `covariance_experiments/`.
+4. A final optimizer-to-risk pipeline built around the synthetic bond universe.
+
+## Main Scripts
+
+- `mip_bond_optimizer.py`
+  - Mixed-integer bond optimizer.
+- `monte_carlo_engine.py`
+  - Monte Carlo simulation and risk metric functions.
+- `run_full_pipeline.py`
+  - Runs the optimizer, evaluates covariance-based risk, runs Monte Carlo, and writes outputs.
+- `run_covariance_experiments.py`
+  - Benchmarks covariance matrix construction methods.
+
+## Environment Setup
+
+This repo now has a local virtual environment at `.venv/`.
+
+Create it if needed:
+
+```bash
+python3 -m venv .venv
+```
+
+Install the pinned dependencies:
+
+```bash
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+Run all project commands with the local interpreter:
+
+```bash
+.venv/bin/python ...
+```
+
+## How To Run The Optimizer
+
+Run from the repo root:
+
+```bash
+.venv/bin/python mip_bond_optimizer.py
+```
+
+This loads:
+
+- `data/synthetic_bond_universe.csv`
+- `data/synthetic_covariance_matrix.csv`
+
+It solves the predefined bond portfolio scenarios and prints scenario-level summary information.
+
+## How To Run The Full Pipeline
+
+Run from the repo root:
+
+```bash
+.venv/bin/python run_full_pipeline.py
+```
+
+This will:
+
+1. Load the synthetic bond universe and covariance matrix.
+2. Run all optimizer scenarios.
+3. Save each optimal portfolio.
+4. Run Monte Carlo simulation for each optimal portfolio.
+5. Save simulated returns and Monte Carlo risk metrics.
+
+## Notebook
+
+- `notebooks/final_project_pipeline.ipynb`
+  - Demonstrates the end-to-end workflow from loading data through Monte Carlo plots.
+
+If you want to use the notebook with the repo-local environment, launch Jupyter from the virtual environment:
+
+```bash
+.venv/bin/python -m notebook
+```
+
+## Files Produced
+
+The full pipeline writes files to `outputs/`:
+
+- `outputs/portfolio_scenario_{id}.csv`
+  - Optimized bond portfolio for a scenario.
+- `outputs/mc_returns_scenario_{id}.csv`
+  - Simulated portfolio returns from Monte Carlo.
+- `outputs/mc_metrics_scenario_{id}.csv`
+  - Monte Carlo summary risk metrics such as mean, standard deviation, VaR, and CVaR.
+- `outputs/scenario_summary.csv`
+  - Scenario-level summary table across all optimal scenarios.
+
+## Brief Explanation Of Covariance Risk
+
+The covariance matrix measures how bond returns move together. It is used to compute portfolio variance:
+
+- `variance = w.T @ Sigma @ w`
+
+where `w` is the portfolio weight vector and `Sigma` is the covariance matrix. Portfolio volatility is the square root of variance. This captures how individual bond risks combine at the portfolio level instead of treating each bond independently.
+
+## Brief Explanation Of Monte Carlo Simulation
+
+Monte Carlo simulation draws many possible return scenarios from a multivariate normal distribution using:
+
+- expected asset returns
+- portfolio weights
+- the covariance matrix for the selected bonds
+
+From those simulated portfolio returns, the pipeline computes:
+
+- mean return
+- standard deviation
+- minimum and maximum simulated return
+- VaR
+- CVaR
+
+This gives a distribution of possible outcomes instead of a single risk number.
 
 ## Folder Map
 
-### Top-level scripts
-
-- `build_bond_dataset.py`
-  - Builds the synthetic bond dataset in `data/`.
-- `build_real_bond_dataset.py`
-  - Builds the real bond dataset in `real_data/`.
-- `run_covariance_experiments.py`
-  - Runs the covariance construction benchmarks and writes outputs to `covariance_experiments/`.
-
-### Synthetic dataset files
-
-- `data/bond_factors_monthly.csv`
-  - Monthly factor backbone used for the synthetic bond construction.
-- `data/synthetic_bond_universe.csv`
-  - Synthetic bond-level universe with bond type, rating, maturity, duration, liquidity, and related fields.
-- `data/synthetic_bond_history.csv`
-  - Monthly return history for the synthetic bonds.
-- `data/synthetic_covariance_matrix.csv`
-  - Covariance matrix built from the synthetic bond return history.
-- `data/dataset_manifest.csv`
-  - Row-count summary for the synthetic dataset outputs.
-
-### Real dataset files
-
-- `real_data/real_bond_asset_metadata.csv`
-  - Asset list for the real bond universe.
-- `real_data/real_bond_assets_daily.csv`
-  - Daily asset levels for the real universe.
-- `real_data/real_bond_daily_returns.csv`
-  - Daily returns for the real universe.
-- `real_data/real_bond_monthly_returns.csv`
-  - Main monthly return panel for the real universe.
-- `real_data/real_bond_factors_monthly.csv`
-  - Monthly macro and bond factor series used with the real dataset.
-- `real_data/real_bond_daily_covariance_matrix.csv`
-  - Daily covariance matrix for the real universe.
-- `real_data/real_bond_monthly_covariance_matrix.csv`
-  - Monthly covariance matrix for the real universe.
-- `real_data/real_dataset_manifest.csv`
-  - Row-count summary for the real dataset outputs.
-
-### Covariance experiment files
-
-- `covariance_experiments/covariance_benchmark_results.csv`
-  - Benchmark results for covariance matrix construction.
-- `covariance_experiments/covariance_experiment_sizes.csv`
-  - The asset sizes used in the covariance scaling tests.
-- `covariance_experiments/covariance_experiment_summary.md`
-  - Short written summary of the covariance experiment setup and results.
-
-### Documentation files
-
-- `REAL_DATASET.md`
-  - Notes on how the real dataset is constructed.
-- `REAL_BOND_UNIVERSE.md`
-  - List of the indexes and ETFs used in the real bond universe.
-- `COVARIANCE_EXPERIMENTS.md`
-  - Notes on how to run the covariance experiments.
-- `SOURCES.md`
-  - Source notes for the datasets reviewed and used.
-
-## Most Important Files
-
-If you are working with the real-data version of the project, the main files are:
-
-- `real_data/real_bond_asset_metadata.csv`
-- `real_data/real_bond_monthly_returns.csv`
-- `real_data/real_bond_factors_monthly.csv`
-- `covariance_experiments/covariance_benchmark_results.csv`
-- `REAL_BOND_UNIVERSE.md`
-
-If you are working with the synthetic-data version of the project, the main files are:
-
-- `data/synthetic_bond_universe.csv`
-- `data/synthetic_bond_history.csv`
-- `data/synthetic_covariance_matrix.csv`
-
-## Rebuild Commands
-
-Run these from the project folder if you need to regenerate outputs:
-
-```bash
-python3 /Users/tanishqsardana/Documents/HW/bond_portfolio_dataset/build_bond_dataset.py
-python3 /Users/tanishqsardana/Documents/HW/bond_portfolio_dataset/build_real_bond_dataset.py
-python3 /Users/tanishqsardana/Documents/HW/bond_portfolio_dataset/run_covariance_experiments.py
-```
+- `data/`
+  - Synthetic bond universe, synthetic bond history, and synthetic covariance matrix.
+- `real_data/`
+  - Real bond indexes and ETFs with daily and monthly return outputs.
+- `covariance_experiments/`
+  - Covariance benchmark outputs and summary notes.
+- `outputs/`
+  - Final optimizer and Monte Carlo pipeline outputs.
+- `Info_md's/`
+  - Supporting markdown reference files for the project.
+- `requirements.txt`
+  - Pinned Python dependencies for the repo-local environment.
