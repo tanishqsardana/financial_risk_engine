@@ -138,5 +138,5 @@ Portfolio Volatility: 0.059080
       T1  Vectorized risk eval        0.0002         0.0001     3.22
     T2  Parallel MIP scenarios        1.6798         1.1545     1.45
      T3  Cython MC (n=100,000)        0.0036         0.0026     1.37
-T6  Parallel solver comparison        2.1057         1.3051     1.61
-                TOTAL PIPELINE        3.2691         0.3291     9.93
+    T6  Parallel solver comparison    2.1057         1.3051     1.61
+    TOTAL PIPELINE                    3.2691         0.3291     9.93
